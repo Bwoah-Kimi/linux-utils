@@ -1,0 +1,19 @@
+model_provider = "codex-for-me"
+
+[model_providers.packycode]
+name = "packycode"
+base_url = "https://codex-api.packycode.com/v1"
+wire_api = "responses"
+requires_openai_auth = true
+
+[model_providers.cubence]
+name = "cubence"
+base_url = "https://api.cubence.com/v1"
+wire_api = "responses"
+requires_openai_auth = true
+
+[model_providers.codex-for-me]
+name = "codex-for-me"
+base_url = "https://hello.vangularcode.asia/v1"
+wire_api = "responses"
+requires_openai_auth = true

@@ -1,0 +1,340 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage:
+  proxy on [--host HOST] [--port PORT] [--scheme SCHEME]
+  proxy off
+  proxy resolve [--host HOST] [--port PORT] [--scheme SCHEME]
+  proxy status
+
+Overrides:
+  PROXY_HOST
+  PROXY_PORT
+  PROXY_SCHEME
+
+Supported schemes:
+  http
+  https
+  socks5h
+
+Notes:
+  `proxy on` and `proxy off` emit shell commands.
+  The `proxy()` shell function in ~/.bash_functions applies them to the current shell.
+  `proxy status` performs a live outbound lookup using the current environment.
+EOF
+}
+
+die() {
+    printf '%s\n' "$*" >&2
+    exit 1
+}
+
+is_wsl() {
+    if [[ -n "${WSL_INTEROP:-}" || -n "${WSL_DISTRO_NAME:-}" ]]; then
+        return 0
+    fi
+
+    case "$(uname -r 2>/dev/null || true)" in
+        *[Mm]icrosoft*|*WSL*)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+first_nameserver() {
+    [[ -r /etc/resolv.conf ]] || return 1
+    awk '/^nameserver[[:space:]]+/ { print $2; exit }' /etc/resolv.conf
+}
+
+default_gateway() {
+    command -v ip >/dev/null 2>&1 || return 1
+    ip route 2>/dev/null | awk '/^default[[:space:]]+/ { print $3; exit }'
+}
+
+validate_port() {
+    local port="$1"
+
+    [[ "$port" =~ ^[0-9]+$ ]] || die "invalid port: $port"
+    (( port >= 1 && port <= 65535 )) || die "invalid port: $port"
+}
+
+validate_scheme() {
+    local scheme="$1"
+
+    case "$scheme" in
+        http|https|socks5h) ;;
+        *)
+            die "unsupported scheme: $scheme"
+            ;;
+    esac
+}
+
+resolve_host() {
+    local host="${PROXY_HOST:-}"
+    local detected=""
+
+    while (($#)); do
+        case "$1" in
+            --host)
+                shift
+                (($#)) || die "missing value for --host"
+                host="$1"
+                ;;
+            --port)
+                shift
+                (($#)) || die "missing value for --port"
+                ;;
+            --scheme)
+                shift
+                (($#)) || die "missing value for --scheme"
+                ;;
+            *)
+                die "unknown argument: $1"
+                ;;
+        esac
+        shift
+    done
+
+    if [[ -n "$host" ]]; then
+        printf '%s\n' "$host"
+        return 0
+    fi
+
+    if is_wsl; then
+        detected="$(first_nameserver || true)"
+        if [[ -n "$detected" ]]; then
+            printf '%s\n' "$detected"
+            return 0
+        fi
+    fi
+
+    detected="$(default_gateway || true)"
+    if [[ -n "$detected" ]]; then
+        printf '%s\n' "$detected"
+        return 0
+    fi
+
+    printf '%s\n' "127.0.0.1"
+}
+
+resolve_proxy_url() {
+    local host=""
+    local port="${PROXY_PORT:-7897}"
+    local scheme="${PROXY_SCHEME:-http}"
+
+    while (($#)); do
+        case "$1" in
+            --host)
+                shift
+                (($#)) || die "missing value for --host"
+                host="$1"
+                ;;
+            --port)
+                shift
+                (($#)) || die "missing value for --port"
+                port="$1"
+                ;;
+            --scheme)
+                shift
+                (($#)) || die "missing value for --scheme"
+                scheme="$1"
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            *)
+                die "unknown argument: $1"
+                ;;
+        esac
+        shift
+    done
+
+    validate_port "$port"
+    validate_scheme "$scheme"
+
+    if [[ -z "$host" ]]; then
+        host="$(resolve_host)"
+    fi
+
+    printf '%s://%s:%s\n' "$scheme" "$host" "$port"
+}
+
+emit_exports() {
+    local proxy_url="$1"
+    local var_name=""
+
+    for var_name in http_proxy https_proxy all_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY; do
+        printf 'export %s=%q\n' "$var_name" "$proxy_url"
+    done
+}
+
+emit_unsets() {
+    local var_name=""
+
+    for var_name in http_proxy https_proxy all_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY; do
+        printf 'unset %s\n' "$var_name"
+    done
+}
+
+lookup_egress_info() {
+    local entry=""
+    local source=""
+    local url=""
+    local response=""
+    local last_error="all status lookups failed"
+    local -a endpoints=(
+        "ipinfo:https://ipinfo.io/json"
+        "ipify:https://api.ipify.org?format=json"
+    )
+
+    LOOKUP_SOURCE=""
+    LOOKUP_JSON=""
+    LOOKUP_ERROR=""
+
+    command -v curl >/dev/null 2>&1 || {
+        LOOKUP_ERROR="curl not found"
+        return 1
+    }
+
+    for entry in "${endpoints[@]}"; do
+        source="${entry%%:*}"
+        url="${entry#*:}"
+        if response="$(curl -fsSL --connect-timeout 2 --max-time 5 "$url" 2>/dev/null)"; then
+            LOOKUP_SOURCE="$source"
+            LOOKUP_JSON="$response"
+            return 0
+        fi
+        last_error="lookup failed for ${url}"
+    done
+
+    LOOKUP_ERROR="$last_error"
+    return 1
+}
+
+print_egress_details() {
+    if lookup_egress_info; then
+        printf 'lookup: %s\n' "$LOOKUP_SOURCE"
+        PROXY_LOOKUP_JSON="$LOOKUP_JSON" python3 - <<'PY'
+import json
+import os
+
+raw = os.environ["PROXY_LOOKUP_JSON"]
+data = json.loads(raw)
+
+ip = data.get("ip") or data.get("query")
+city = data.get("city") or data.get("city_name")
+region = data.get("region") or data.get("regionName")
+country = (
+    data.get("country")
+    or data.get("country_code")
+    or data.get("countryCode")
+)
+org = (
+    data.get("org")
+    or data.get("organization")
+    or data.get("asn_org")
+    or data.get("isp")
+)
+
+if ip:
+    print(f"egress ip: {ip}")
+
+if city or region or country:
+    print(
+        "city/region/country: "
+        f"{city or '-'} / {region or '-'} / {country or '-'}"
+    )
+
+if org:
+    print(f"org: {org}")
+PY
+    else
+        printf 'lookup: failed\n'
+        printf 'error: %s\n' "$LOOKUP_ERROR"
+    fi
+}
+
+status() {
+    local vars=(http_proxy https_proxy all_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY)
+    local set_count=0
+    local value_count=0
+    local first_value=""
+    local var_name=""
+    local current_value=""
+
+    for var_name in "${vars[@]}"; do
+        if [[ -n "${!var_name-}" ]]; then
+            ((set_count += 1))
+            current_value="${!var_name}"
+            if [[ -z "$first_value" ]]; then
+                first_value="$current_value"
+                ((value_count = 1))
+            elif [[ "$current_value" != "$first_value" ]]; then
+                ((value_count += 1))
+            fi
+        fi
+    done
+
+    if (( set_count == 0 )); then
+        printf 'proxy: off\n'
+        print_egress_details
+        return 0
+    fi
+
+    if (( set_count == ${#vars[@]} && value_count == 1 )); then
+        printf 'proxy: on\n'
+        printf 'url: %s\n' "$first_value"
+        print_egress_details
+        return 0
+    fi
+
+    printf 'proxy: inconsistent\n'
+    for var_name in "${vars[@]}"; do
+        if [[ -n "${!var_name-}" ]]; then
+            printf '%s=%s\n' "$var_name" "${!var_name}"
+        else
+            printf '%s=<unset>\n' "$var_name"
+        fi
+    done
+    print_egress_details
+}
+
+main() {
+    local command="${1:-}"
+
+    case "$command" in
+        on|set)
+            shift
+            emit_exports "$(resolve_proxy_url "$@")"
+            ;;
+        off|unset)
+            shift
+            (($# == 0)) || die "$command does not accept arguments"
+            emit_unsets
+            ;;
+        resolve)
+            shift
+            resolve_proxy_url "$@"
+            ;;
+        status)
+            shift
+            (($# == 0)) || die "status does not accept arguments"
+            status
+            ;;
+        -h|--help|help)
+            usage
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

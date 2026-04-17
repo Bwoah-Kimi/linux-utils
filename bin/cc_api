@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+umask 077
+
+exec python3 - "$@" <<'PY'
+import json
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+
+def eprint(message: str) -> None:
+    print(message, file=sys.stderr)
+
+
+def fail(message: str, exit_code: int = 1) -> None:
+    eprint(message)
+    raise SystemExit(exit_code)
+
+
+def usage(exit_code: int = 1) -> None:
+    message = "\n".join(
+        [
+            "Usage:",
+            "  cc_api list",
+            "  cc_api current",
+            "  cc_api switch --<provider>",
+        ]
+    )
+    if exit_code == 0:
+        print(message)
+    else:
+        eprint(message)
+    raise SystemExit(exit_code)
+
+
+def load_json(path: Path) -> dict:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        fail(f"missing file: {path}")
+    except OSError as exc:
+        fail(f"failed to read {path}: {exc}")
+
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        fail(f"malformed JSON in {path}: {exc}")
+
+    if not isinstance(data, dict):
+        fail(f"expected JSON object in {path}")
+    return data
+
+
+def write_text_atomic(path: Path, content: str, *, mode: int) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            delete=False,
+        ) as handle:
+            handle.write(content)
+            temp_path = Path(handle.name)
+        os.chmod(temp_path, mode)
+        os.replace(temp_path, path)
+        os.chmod(path, mode)
+    except OSError as exc:
+        if temp_path is not None and temp_path.exists():
+            temp_path.unlink(missing_ok=True)
+        fail(f"failed to write {path}: {exc}")
+
+
+def parse_provider_argument(raw: str) -> str:
+    if not raw.startswith("--") or raw == "--":
+        fail("switch expects --<provider>")
+    return raw[2:]
+
+
+def validate_provider_map(data: dict, path: Path) -> dict[str, dict[str, str]]:
+    if not data:
+        fail(f"empty provider list in {path}")
+
+    validated: dict[str, dict[str, str]] = {}
+    for provider_name, provider_env in data.items():
+        if not isinstance(provider_name, str) or not provider_name:
+            fail(f"invalid provider name in {path}")
+        if not isinstance(provider_env, dict):
+            fail(f"provider '{provider_name}' must map to an object in {path}")
+        normalized_env: dict[str, str] = {}
+        for key, value in provider_env.items():
+            if not isinstance(key, str) or not key:
+                fail(f"provider '{provider_name}' has an invalid env key in {path}")
+            if not isinstance(value, str):
+                fail(f"provider '{provider_name}' key '{key}' must be a string in {path}")
+            normalized_env[key] = value
+        validated[provider_name] = normalized_env
+    return validated
+
+
+def get_settings_env(settings: dict) -> dict:
+    env = settings.get("env")
+    if isinstance(env, dict):
+        return dict(env)
+    return {}
+
+
+def get_managed_keys(providers: dict[str, dict[str, str]]) -> set[str]:
+    managed_keys: set[str] = set()
+    for provider_env in providers.values():
+        managed_keys.update(provider_env.keys())
+    return managed_keys
+
+
+def current_managed_env(env: dict, managed_keys: set[str]) -> dict:
+    return {key: env[key] for key in env if key in managed_keys}
+
+
+def matching_providers(env: dict, providers: dict[str, dict[str, str]], managed_keys: set[str]) -> list[str]:
+    managed_env = current_managed_env(env, managed_keys)
+    return [provider_name for provider_name, provider_env in providers.items() if provider_env == managed_env]
+
+
+def main(argv: list[str]) -> int:
+    if not argv or argv[0] in {"-h", "--help"}:
+        usage(0 if argv and argv[0].startswith("-") else 1)
+
+    claude_dir = Path.home() / ".claude"
+    settings_path = claude_dir / "settings.json"
+    provider_list_path = claude_dir / "provider_list.json"
+
+    settings = load_json(settings_path)
+    providers = validate_provider_map(load_json(provider_list_path), provider_list_path)
+    managed_keys = get_managed_keys(providers)
+    env = get_settings_env(settings)
+    matches = matching_providers(env, providers, managed_keys)
+
+    command = argv[0]
+
+    if command == "list":
+        for provider_name in providers:
+            is_match = provider_name in matches
+            marker = "*" if is_match else " "
+            print(f"{marker} {provider_name}  match: {'yes' if is_match else 'no'}")
+        return 0
+
+    if command == "current":
+        current_provider = matches[0] if matches else "unknown"
+        print(f"provider: {current_provider}")
+        print(f"env: {'in sync' if matches else 'out of sync'}")
+        return 0
+
+    if command == "switch":
+        if len(argv) != 2:
+            usage(1)
+
+        target_provider = parse_provider_argument(argv[1])
+        if target_provider not in providers:
+            available = ", ".join(providers.keys())
+            fail(f"unknown provider '{target_provider}'. available: {available}")
+
+        next_env = {key: value for key, value in env.items() if key not in managed_keys}
+        next_env.update(providers[target_provider])
+        settings["env"] = next_env
+
+        new_settings_text = json.dumps(settings, indent=2) + "\n"
+        write_text_atomic(settings_path, new_settings_text, mode=0o600)
+        print(f"switched to {target_provider}")
+        print(f"updated: {settings_path}")
+        return 0
+
+    usage(1)
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
+PY

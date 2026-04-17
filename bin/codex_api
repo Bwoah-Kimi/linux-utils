@@ -1,0 +1,184 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+umask 077
+
+exec python3 - "$@" <<'PY'
+import json
+import os
+import re
+import sys
+import tempfile
+import tomllib
+from pathlib import Path
+
+
+def eprint(message: str) -> None:
+    print(message, file=sys.stderr)
+
+
+def fail(message: str, exit_code: int = 1) -> None:
+    eprint(message)
+    raise SystemExit(exit_code)
+
+
+def usage(exit_code: int = 1) -> None:
+    message = "\n".join(
+        [
+            "Usage:",
+            "  codex_api list",
+            "  codex_api current",
+            "  codex_api switch --<provider>",
+        ]
+    )
+    if exit_code == 0:
+        print(message)
+    else:
+        eprint(message)
+    raise SystemExit(exit_code)
+
+
+def load_toml(path: Path) -> tuple[dict, str]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        fail(f"missing file: {path}")
+    except OSError as exc:
+        fail(f"failed to read {path}: {exc}")
+
+    try:
+        return tomllib.loads(text), text
+    except tomllib.TOMLDecodeError as exc:
+        fail(f"malformed TOML in {path}: {exc}")
+
+
+def load_json(path: Path, *, required: bool) -> dict:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        if required:
+            fail(f"missing file: {path}")
+        return {}
+    except OSError as exc:
+        fail(f"failed to read {path}: {exc}")
+
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        fail(f"malformed JSON in {path}: {exc}")
+
+    if not isinstance(data, dict):
+        fail(f"expected JSON object in {path}")
+    return data
+
+
+def write_text_atomic(path: Path, content: str, *, mode: int) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            delete=False,
+        ) as handle:
+            handle.write(content)
+            temp_path = Path(handle.name)
+        os.chmod(temp_path, mode)
+        os.replace(temp_path, path)
+        os.chmod(path, mode)
+    except OSError as exc:
+        if temp_path is not None and temp_path.exists():
+            temp_path.unlink(missing_ok=True)
+        fail(f"failed to write {path}: {exc}")
+
+
+def replace_model_provider(config_text: str, provider: str) -> str:
+    pattern = re.compile(r'(?m)^model_provider\s*=\s*"[^"]*"\s*$')
+    updated, count = pattern.subn(f'model_provider = "{provider}"', config_text, count=1)
+    if count != 1:
+        fail("could not locate top-level model_provider in config.toml")
+    return updated
+
+
+def parse_provider_argument(raw: str) -> str:
+    if not raw.startswith("--") or raw == "--":
+        fail("switch expects --<provider>")
+    return raw[2:]
+
+
+def main(argv: list[str]) -> int:
+    if not argv or argv[0] in {"-h", "--help"}:
+        usage(0 if argv and argv[0].startswith("-") else 1)
+
+    codex_dir = Path.home() / ".codex"
+    config_path = codex_dir / "config.toml"
+    auth_path = codex_dir / "auth.json"
+    auth_list_path = codex_dir / "auth_list.json"
+
+    config, config_text = load_toml(config_path)
+    providers = config.get("model_providers")
+    if not isinstance(providers, dict) or not providers:
+        fail(f"missing or empty model_providers in {config_path}")
+    active_provider = config.get("model_provider")
+    if not isinstance(active_provider, str) or not active_provider:
+        fail(f"missing model_provider in {config_path}")
+
+    command = argv[0]
+
+    if command == "list":
+        auth_list = load_json(auth_list_path, required=True)
+        for provider_name in providers:
+            marker = "*" if provider_name == active_provider else " "
+            has_key = "yes" if provider_name in auth_list and isinstance(auth_list[provider_name], str) and auth_list[provider_name] else "no"
+            print(f"{marker} {provider_name}  key: {has_key}")
+        return 0
+
+    if command == "current":
+        auth_list = load_json(auth_list_path, required=True)
+        auth = load_json(auth_path, required=False)
+        stored_key = auth_list.get(active_provider)
+        active_key = auth.get("OPENAI_API_KEY")
+        print(f"provider: {active_provider}")
+        print(f"stored key: {'yes' if isinstance(stored_key, str) and stored_key else 'no'}")
+        if not isinstance(stored_key, str) or not stored_key:
+            print("auth: no stored key")
+        elif active_key == stored_key:
+            print("auth: in sync")
+        elif active_key:
+            print("auth: out of sync")
+        else:
+            print("auth: missing")
+        return 0
+
+    if command == "switch":
+        if len(argv) != 2:
+            usage(1)
+
+        target_provider = parse_provider_argument(argv[1])
+        if target_provider not in providers:
+            available = ", ".join(providers.keys())
+            fail(f"unknown provider '{target_provider}'. available: {available}")
+
+        auth_list = load_json(auth_list_path, required=True)
+        target_key = auth_list.get(target_provider)
+        if not isinstance(target_key, str) or not target_key:
+            fail(f"missing API key for provider '{target_provider}' in {auth_list_path}")
+
+        new_config_text = replace_model_provider(config_text, target_provider)
+        new_auth_text = json.dumps({"OPENAI_API_KEY": target_key}, indent=2) + "\n"
+        write_text_atomic(config_path, new_config_text, mode=0o600)
+        write_text_atomic(auth_path, new_auth_text, mode=0o600)
+        print(f"switched to {target_provider}")
+        print(f"updated: {config_path}")
+        print(f"updated: {auth_path}")
+        return 0
+
+    usage(1)
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
+PY

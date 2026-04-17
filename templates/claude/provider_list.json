@@ -1,0 +1,13 @@
+{
+  "cubence": {
+    "ANTHROPIC_AUTH_TOKEN": "<fill-me>",
+    "ANTHROPIC_BASE_URL": "https://api.cubence.com"
+  },
+  "autodl_claude": {
+    "ANTHROPIC_AUTH_TOKEN": "<fill-me>",
+    "ANTHROPIC_BASE_URL": "https://www.autodl.art/api/v1/anthropic",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-sonnet-4-6-cc",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-4-6-cc",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-4-6-cc"
+  }
+}
