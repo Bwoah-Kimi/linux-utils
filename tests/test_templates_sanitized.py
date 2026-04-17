@@ -24,6 +24,15 @@ class TemplateSanitizationTest(unittest.TestCase):
         self.assertNotIn("clp_", raw)
         self.assertNotIn("G5XPWz", raw)
 
+    def test_readme_documents_install_workflow(self):
+        readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("bash install/install_codex_api.sh", readme)
+        self.assertIn("bash install/install_cc_api.sh", readme)
+        self.assertIn("bash install/install_proxy.sh", readme)
+        self.assertIn("~/.codex", readme)
+        self.assertIn("~/.claude", readme)
+        self.assertIn("fill in real secrets", readme.lower())
+
 
 if __name__ == "__main__":
     unittest.main()
