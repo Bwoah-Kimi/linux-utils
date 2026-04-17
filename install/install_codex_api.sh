@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# shellcheck source=/dev/null
+source "${REPO_ROOT}/lib/install_common.sh"
+
+HOME_DIR="${HOME:?HOME must be set}"
+CODEX_DIR="${HOME_DIR}/.codex"
+BIN_DIR="${HOME_DIR}/.local/bin"
+TARGET_SCRIPT="${BIN_DIR}/codex_api"
+TARGET_AUTH_LIST="${CODEX_DIR}/auth_list.json"
+TARGET_CONFIG="${CODEX_DIR}/config.toml"
+
+print_step "Installing codex_api"
+require_existing_dir "${CODEX_DIR}"
+ensure_dir "${BIN_DIR}"
+
+backup_file "${TARGET_SCRIPT}"
+backup_file "${TARGET_AUTH_LIST}"
+backup_file "${TARGET_CONFIG}"
+
+copy_file "${REPO_ROOT}/bin/codex_api" "${TARGET_SCRIPT}"
+set_executable "${TARGET_SCRIPT}"
+copy_file "${REPO_ROOT}/templates/codex/auth_list.json" "${TARGET_AUTH_LIST}"
+
+python3 "${REPO_ROOT}/lib/merge_codex_config.py" \
+    "${TARGET_CONFIG}" \
+    "${REPO_ROOT}/templates/codex/config.providers.toml"
+
+printf 'Installed: %s\n' "${TARGET_SCRIPT}"
+printf 'Installed: %s\n' "${TARGET_AUTH_LIST}"
+printf 'Merged helper-managed providers into: %s\n' "${TARGET_CONFIG}"
+printf 'Manual step: fill in real API keys in %s\n' "${TARGET_AUTH_LIST}"
