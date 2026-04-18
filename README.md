@@ -71,6 +71,8 @@ After installation, fill in real secrets in:
 - `~/.codex/auth_list.json`
 - `~/.claude/provider_list.json`
 
+If multiple Codex provider aliases share the same upstream API key, repeat that same key under each alias in `~/.codex/auth_list.json`.
+
 Then reload your shell if needed:
 
 ```bash

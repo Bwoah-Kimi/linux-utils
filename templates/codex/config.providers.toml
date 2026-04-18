@@ -1,4 +1,4 @@
-model_provider = "codex-for-me"
+model_provider = "codex-for-me-main"
 
 [model_providers.packycode]
 name = "packycode"
@@ -12,8 +12,20 @@ base_url = "https://api.cubence.com/v1"
 wire_api = "responses"
 requires_openai_auth = true
 
-[model_providers.codex-for-me]
-name = "codex-for-me"
+[model_providers.codex-for-me-main]
+name = "codex-for-me-main"
+base_url = "https://api-vip.codex-for.me/v1"
+wire_api = "responses"
+requires_openai_auth = true
+
+[model_providers.codex-for-me-bk1]
+name = "codex-for-me-bk1"
 base_url = "https://hello.vangularcode.asia/v1"
+wire_api = "responses"
+requires_openai_auth = true
+
+[model_providers.codex-for-me-bk2]
+name = "codex-for-me-bk2"
+base_url = "https://fast.nocodingjustai.me/v1"
 wire_api = "responses"
 requires_openai_auth = true

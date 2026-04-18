@@ -14,7 +14,9 @@ class TemplateSanitizationTest(unittest.TestCase):
             {
                 "packycode": "<fill-me>",
                 "cubence": "<fill-me>",
-                "codex-for-me": "<fill-me>",
+                "codex-for-me-main": "<fill-me>",
+                "codex-for-me-bk1": "<fill-me>",
+                "codex-for-me-bk2": "<fill-me>",
             },
         )
 

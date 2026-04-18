@@ -9,8 +9,11 @@ import os
 import re
 import sys
 import tempfile
-import tomllib
 from pathlib import Path
+
+
+SECTION_RE = re.compile(r"^\[([^\]]+)\]\s*$")
+KEY_VALUE_RE = re.compile(r"^([A-Za-z0-9_-]+)\s*=\s*(.+)\s*$")
 
 
 def eprint(message: str) -> None:
@@ -38,7 +41,18 @@ def usage(exit_code: int = 1) -> None:
     raise SystemExit(exit_code)
 
 
-def load_toml(path: Path) -> tuple[dict, str]:
+def parse_toml_scalar(raw_value: str, *, path: Path, line_number: int) -> object:
+    if raw_value in {"true", "false"}:
+        return raw_value == "true"
+    if raw_value.startswith('"') and raw_value.endswith('"'):
+        try:
+            return json.loads(raw_value)
+        except json.JSONDecodeError as exc:
+            fail(f"malformed TOML string in {path}:{line_number}: {exc}")
+    fail(f"unsupported TOML value in {path}:{line_number}: {raw_value}")
+
+
+def load_config(path: Path) -> tuple[dict, str]:
     try:
         text = path.read_text(encoding="utf-8")
     except FileNotFoundError:
@@ -46,10 +60,45 @@ def load_toml(path: Path) -> tuple[dict, str]:
     except OSError as exc:
         fail(f"failed to read {path}: {exc}")
 
-    try:
-        return tomllib.loads(text), text
-    except tomllib.TOMLDecodeError as exc:
-        fail(f"malformed TOML in {path}: {exc}")
+    model_provider = ""
+    providers: dict[str, dict[str, object]] = {}
+    current_section: str | None = None
+    current_provider: str | None = None
+
+    for line_number, raw_line in enumerate(text.splitlines(), start=1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+
+        section_match = SECTION_RE.match(line)
+        if section_match:
+            current_section = section_match.group(1)
+            if current_section.startswith("model_providers."):
+                current_provider = current_section[len("model_providers.") :]
+                if not current_provider:
+                    fail(f"malformed provider section in {path}:{line_number}")
+                providers[current_provider] = {}
+            else:
+                current_provider = None
+            continue
+
+        key_value_match = KEY_VALUE_RE.match(line)
+        if not key_value_match:
+            if current_provider is not None:
+                fail(f"malformed TOML line in {path}:{line_number}: {line}")
+            continue
+
+        key, raw_value = key_value_match.groups()
+        value = parse_toml_scalar(raw_value, path=path, line_number=line_number)
+
+        if current_provider is not None:
+            providers[current_provider][key] = value
+        elif current_section is None and key == "model_provider":
+            if not isinstance(value, str) or not value:
+                fail(f"invalid model_provider in {path}:{line_number}")
+            model_provider = value
+
+    return {"model_provider": model_provider, "model_providers": providers}, text
 
 
 def load_json(path: Path, *, required: bool) -> dict:
@@ -117,7 +166,7 @@ def main(argv: list[str]) -> int:
     auth_path = codex_dir / "auth.json"
     auth_list_path = codex_dir / "auth_list.json"
 
-    config, config_text = load_toml(config_path)
+    config, config_text = load_config(config_path)
     providers = config.get("model_providers")
     if not isinstance(providers, dict) or not providers:
         fail(f"missing or empty model_providers in {config_path}")

@@ -39,11 +39,13 @@ class InstallCodexApiTest(unittest.TestCase):
             self.assertTrue((home / ".local" / "bin" / "codex_api").exists())
             auth_list = json.loads((home / ".codex" / "auth_list.json").read_text(encoding="utf-8"))
             self.assertEqual(auth_list["packycode"], "<fill-me>")
+            self.assertEqual(auth_list["codex-for-me-main"], "<fill-me>")
             config = (home / ".codex" / "config.toml").read_text(encoding="utf-8")
-            self.assertIn('model_provider = "codex-for-me"', config)
+            self.assertIn('model_provider = "codex-for-me-main"', config)
             self.assertIn('[projects."/tmp/project"]', config)
             self.assertIn('trust_level = "trusted"', config)
             self.assertIn('[model_providers.cubence]', config)
+            self.assertIn('[model_providers.codex-for-me-bk2]', config)
 
 
 if __name__ == "__main__":
