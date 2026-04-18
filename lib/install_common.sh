@@ -27,6 +27,18 @@ backup_file() {
     cp "$path" "${path}.bak.${stamp}"
 }
 
+backup_path() {
+    local path="$1"
+    local stamp=""
+
+    if [[ ! -e "$path" ]]; then
+        return 0
+    fi
+
+    stamp="$(date +%Y%m%d%H%M%S)"
+    mv "$path" "${path}.bak.${stamp}"
+}
+
 copy_file() {
     cp "$1" "$2"
 }
