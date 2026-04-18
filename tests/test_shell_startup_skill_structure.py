@@ -23,6 +23,13 @@ class ShellStartupSkillStructureTest(unittest.TestCase):
         self.assertIn("tool-managed", raw)
         self.assertIn("backups", raw)
 
+    def test_readme_documents_skill_install_flow(self):
+        readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("bash install/install_codex_shell_startup_skill.sh", readme)
+        self.assertIn("bash install/install_claude_shell_startup_skill.sh", readme)
+        self.assertIn("~/.codex/skills/shell-startup-normalizer", readme)
+        self.assertIn("~/.claude/skills/shell-startup-normalizer", readme)
+
 
 if __name__ == "__main__":
     unittest.main()

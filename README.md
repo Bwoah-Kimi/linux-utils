@@ -7,6 +7,7 @@ Portable scripts and helper installers for a Linux environment.
 - `codex_api`
 - `cc_api`
 - `proxy`
+- `shell-startup-normalizer` skill for Codex and Claude Code
 
 These helpers live in the repo and are installed by copying files into your home directory. They are not symlinked back to the repository.
 
@@ -16,6 +17,7 @@ These helpers live in the repo and are installed by copying files into your home
 bin/        portable helper executables
 install/    per-helper install scripts
 lib/        shared installer and merge utilities
+skills/     portable agent skills and references
 templates/  sanitized helper-owned config templates
 tests/      repo-local verification scripts
 ```
@@ -39,6 +41,8 @@ cd linux-utils
 bash install/install_codex_api.sh
 bash install/install_cc_api.sh
 bash install/install_proxy.sh
+bash install/install_codex_shell_startup_skill.sh
+bash install/install_claude_shell_startup_skill.sh
 ```
 
 ## What Each Installer Does
@@ -61,6 +65,25 @@ bash install/install_proxy.sh
 - copies `bin/proxy` to `~/.local/bin/proxy`
 - inserts or updates a managed `proxy()` wrapper block in `~/.bash_functions`
 - preserves unrelated shell functions
+
+### `install/install_codex_shell_startup_skill.sh`
+
+- copies `skills/shell-startup-normalizer` to `~/.codex/skills/shell-startup-normalizer`
+- backs up an existing installed skill directory before replacing it
+- does not mutate `.bashrc`, `.zshrc`, or any other shell startup file
+
+### `install/install_claude_shell_startup_skill.sh`
+
+- copies `skills/shell-startup-normalizer` to `~/.claude/skills/shell-startup-normalizer`
+- includes the Claude-facing companion playbook at `claude/CLAUDE.md`
+- backs up an existing installed skill directory before replacing it
+- does not mutate `.bashrc`, `.zshrc`, or any other shell startup file
+
+## Shell Startup Skill Usage
+
+The canonical skill lives at `skills/shell-startup-normalizer/` in this repo. After installation, ask Codex or Claude Code to use the shell-startup-normalizer skill when you want it to inspect messy Bash or Zsh startup files, preserve tool-managed blocks, create backups, and reorganize the files into a cleaner split layout.
+
+The skill installers only install guidance files. They do not change your shell startup files by themselves.
 
 ## Manual Follow-Up
 
@@ -91,10 +114,13 @@ python3 tests/test_merge_codex_config.py
 python3 tests/test_install_codex_api.py
 python3 tests/test_install_cc_api.py
 python3 tests/test_install_proxy.py
+python3 tests/test_shell_startup_skill_structure.py
+python3 tests/test_install_shell_startup_skills.py
 ```
 
 ## Notes
 
 - Template files are sanitized placeholders only
 - Codex config installation merges helper-managed sections rather than replacing the whole file
+- Skill installers copy guidance into Codex or Claude Code without editing shell startup files
 - More Linux environment customizations such as Vim config can be added later
