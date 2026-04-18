@@ -9,5 +9,12 @@
     "ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-sonnet-4-6-cc",
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-4-6-cc",
     "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-4-6-cc"
+  },
+  "autodl_glm": {
+    "ANTHROPIC_AUTH_TOKEN": "<fill-me>",
+    "ANTHROPIC_BASE_URL": "https://www.autodl.art/api/v1/anthropic",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "GLM-5",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "GLM-5.1",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "GLM-5.1"
   }
 }
