@@ -89,11 +89,12 @@ def load_config(path: Path) -> tuple[dict, str]:
             continue
 
         key, raw_value = key_value_match.groups()
-        value = parse_toml_scalar(raw_value, path=path, line_number=line_number)
 
         if current_provider is not None:
+            value = parse_toml_scalar(raw_value, path=path, line_number=line_number)
             providers[current_provider][key] = value
         elif current_section is None and key == "model_provider":
+            value = parse_toml_scalar(raw_value, path=path, line_number=line_number)
             if not isinstance(value, str) or not value:
                 fail(f"invalid model_provider in {path}:{line_number}")
             model_provider = value
