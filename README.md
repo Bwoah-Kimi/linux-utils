@@ -1,21 +1,23 @@
 # linux-utils
 
-Portable scripts and helper installers for a Linux environment.
+Portable scripts, helper installers, and agent skills for Linux and Windows environments.
 
 ## Current Helpers
 
-- `codex_api`
-- `cc_api`
-- `proxy`
+- `cc_api` — switch Claude Code API providers
+- `codex_api` — switch Codex API providers
+- `proxy` — manage HTTP/HTTPS/SOCKS5 proxy env vars
 - `shell-startup-normalizer` skill for Codex and Claude Code
+- `vim-setup` skill for Claude Code
 
 These helpers live in the repo and are installed by copying files into your home directory. They are not symlinked back to the repository.
 
 ## Repo Layout
 
 ```text
-bin/        portable helper executables
-install/    per-helper install scripts
+bin/        portable helper executables (Linux/WSL shebang scripts + Windows .bat launchers)
+docs/       guides and reference docs
+install/    per-helper install scripts (bash for Linux/WSL, PowerShell for Windows)
 lib/        shared installer and merge utilities
 skills/     portable agent skills and references
 templates/  sanitized helper-owned config templates
@@ -24,15 +26,23 @@ tests/      repo-local verification scripts
 
 ## Prerequisites
 
+**Linux / WSL**
 - `~/.codex/` must already exist before running `install_codex_api.sh`
 - `~/.claude/` must already exist before running `install_cc_api.sh`
-- `~/.bashrc` should source `~/.bash_functions` for the `proxy` wrapper to be active in new shells
+- `~/.bashrc` should source `~/.bash_functions` for the `proxy` wrapper to be active
 - `python3` must be available
 - `curl` should be available for live `proxy status` output
 
+**Windows (native)**
+- `%USERPROFILE%\.codex\` must already exist before running `install_codex_api_windows.ps1`
+- `%USERPROFILE%\.claude\` must already exist before running `install_cc_api_windows.ps1`
+- `python` must be available on `PATH`
+
 ## Install
 
-Clone the repo and run only the installers you want:
+Clone the repo and run only the installers you want.
+
+**Linux / WSL**
 
 ```bash
 git clone <your-repo-url> linux-utils
@@ -43,22 +53,38 @@ bash install/install_cc_api.sh
 bash install/install_proxy.sh
 bash install/install_codex_shell_startup_skill.sh
 bash install/install_claude_shell_startup_skill.sh
+bash install/install_claude_vim_setup_skill.sh
 ```
+
+**Windows (native PowerShell)**
+
+```powershell
+git clone <your-repo-url> linux-utils
+cd linux-utils
+
+.\install\install_codex_api_windows.ps1
+.\install\install_cc_api_windows.ps1
+```
+
+The Windows installers copy both the Python script and a `.bat` launcher to
+`%USERPROFILE%\.local\bin\`. Add that directory to your `PATH` if it is not already there.
 
 ## What Each Installer Does
 
-### `install/install_codex_api.sh`
+### `install/install_cc_api.sh` / `install_cc_api_windows.ps1`
 
-- copies `bin/codex_api` to `~/.local/bin/codex_api`
-- copies `templates/codex/auth_list.json` to `~/.codex/auth_list.json`
-- merges helper-managed provider config into `~/.codex/config.toml`
-- preserves unrelated local Codex config such as project trust settings
-
-### `install/install_cc_api.sh`
-
-- copies `bin/cc_api` to `~/.local/bin/cc_api`
-- copies `templates/claude/provider_list.json` to `~/.claude/provider_list.json`
+- copies `bin/cc_api` to `~/.local/bin/cc_api` (and `cc_api.bat` on Windows)
+- merges `templates/claude/provider_list.json` into `~/.claude/provider_list.json`
+  — existing provider entries and their tokens are preserved; new template entries are added with placeholder values
 - leaves `~/.claude/settings.json` untouched
+
+### `install/install_codex_api.sh` / `install_codex_api_windows.ps1`
+
+- copies `bin/codex_api` to `~/.local/bin/codex_api` (and `codex_api.bat` on Windows)
+- merges `templates/codex/auth_list.json` into `~/.codex/auth_list.json`
+  — existing API keys are preserved; new template entries are added with placeholder values
+- merges helper-managed provider config into `~/.codex/config.toml`
+  — preserves unrelated local Codex config such as project trust settings
 
 ### `install/install_proxy.sh`
 
@@ -70,57 +96,71 @@ bash install/install_claude_shell_startup_skill.sh
 
 - copies `skills/shell-startup-normalizer` to `~/.codex/skills/shell-startup-normalizer`
 - backs up an existing installed skill directory before replacing it
-- does not mutate `.bashrc`, `.zshrc`, or any other shell startup file
 
 ### `install/install_claude_shell_startup_skill.sh`
 
 - copies `skills/shell-startup-normalizer` to `~/.claude/skills/shell-startup-normalizer`
-- includes the Claude-facing companion playbook at `claude/CLAUDE.md`
 - backs up an existing installed skill directory before replacing it
-- does not mutate `.bashrc`, `.zshrc`, or any other shell startup file
 
-## Shell Startup Skill Usage
+### `install/install_claude_vim_setup_skill.sh`
 
-The canonical skill lives at `skills/shell-startup-normalizer/` in this repo. After installation, ask Codex or Claude Code to use the shell-startup-normalizer skill when you want it to inspect messy Bash or Zsh startup files, preserve tool-managed blocks, create backups, and reorganize the files into a cleaner split layout.
+- copies `skills/vim-setup` to `~/.claude/skills/vim-setup`
+- backs up an existing installed skill directory before replacing it
 
-The skill installers only install guidance files. They do not change your shell startup files by themselves.
+None of the skill installers mutate shell startup files or editor config.
+
+## Helper Usage
+
+### `cc_api`
+
+```bash
+cc_api -l, --list              # list available Claude Code providers
+cc_api -c, --current           # show active provider
+cc_api -s, --switch <provider> # switch to a provider
+```
+
+### `codex_api`
+
+```bash
+codex_api -l, --list              # list available Codex providers
+codex_api -c, --current           # show active provider
+codex_api -s, --switch <provider> # switch to a provider
+```
 
 ## Manual Follow-Up
 
 The repo intentionally does not store real API keys or private tokens.
 
-After installation, fill in real secrets in:
+After a first-time installation, fill in real secrets in:
 
-- `~/.codex/auth_list.json`
-- `~/.claude/provider_list.json`
+- `~/.codex/auth_list.json` — one key per Codex provider alias
+- `~/.claude/provider_list.json` — env vars per Claude Code provider
 
-If multiple Codex provider aliases share the same upstream API key, repeat that same key under each alias in `~/.codex/auth_list.json`.
+Re-running an installer after adding new providers to the templates will add the
+new entries without touching your existing keys.
 
-Then reload your shell if needed:
+If multiple Codex provider aliases share the same upstream API key, repeat that
+key under each alias in `~/.codex/auth_list.json`.
 
-```bash
-source ~/.bash_functions
-```
+## Permission Migration
 
-or open a new shell session.
+Curated approval rules for Claude Code and Codex are stored in:
+
+- `templates/claude/settings.json` — Claude Code `permissions.allow` entries
+- `templates/codex/default.rules` — Codex `prefix_rule` entries
+
+See [`docs/permission-migration.md`](docs/permission-migration.md) for how to
+apply these to a new machine without overwriting credentials.
 
 ## Verification
 
-Repo-local verification scripts live under `tests/`. The main full pass is:
-
 ```bash
-python3 tests/test_templates_sanitized.py
-python3 tests/test_merge_codex_config.py
-python3 tests/test_install_codex_api.py
-python3 tests/test_install_cc_api.py
-python3 tests/test_install_proxy.py
-python3 tests/test_shell_startup_skill_structure.py
-python3 tests/test_install_shell_startup_skills.py
+python3 -m pytest tests/ -v
 ```
 
 ## Notes
 
-- Template files are sanitized placeholders only
-- Codex config installation merges helper-managed sections rather than replacing the whole file
-- Skill installers copy guidance into Codex or Claude Code without editing shell startup files
-- More Linux environment customizations such as Vim config can be added later
+- Template files contain sanitized placeholders only — no real keys
+- JSON installers merge rather than replace: existing values are always preserved
+- Codex config installation merges only `[model_providers.*]` sections, leaving everything else intact
+- Skill installers copy guidance files only; they do not edit shell or editor config
