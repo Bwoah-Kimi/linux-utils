@@ -1,9 +1,4 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-umask 077
-
-exec python3 - "$@" <<'PY'
+#!/usr/bin/env python3
 import json
 import os
 import re
@@ -11,6 +6,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+os.umask(0o077)
 
 SECTION_RE = re.compile(r"^\[([^\]]+)\]\s*$")
 KEY_VALUE_RE = re.compile(r"^([A-Za-z0-9_-]+)\s*=\s*(.+)\s*$")
@@ -74,7 +70,7 @@ def load_config(path: Path) -> tuple[dict, str]:
         if section_match:
             current_section = section_match.group(1)
             if current_section.startswith("model_providers."):
-                current_provider = current_section[len("model_providers.") :]
+                current_provider = current_section[len("model_providers."):]
                 if not current_provider:
                     fail(f"malformed provider section in {path}:{line_number}")
                 providers[current_provider] = {}
@@ -228,4 +224,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-PY
