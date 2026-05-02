@@ -1,4 +1,4 @@
-# linux-utils
+# dev-tools
 
 Portable scripts, helper installers, and agent skills for Linux and Windows environments.
 
@@ -45,8 +45,8 @@ Clone the repo and run only the installers you want.
 **Linux / WSL**
 
 ```bash
-git clone <your-repo-url> linux-utils
-cd linux-utils
+git clone <your-repo-url> dev-tools
+cd dev-tools
 
 bash install/install_codex_api.sh
 bash install/install_cc_api.sh
@@ -59,8 +59,8 @@ bash install/install_claude_vim_setup_skill.sh
 **Windows (native PowerShell)**
 
 ```powershell
-git clone <your-repo-url> linux-utils
-cd linux-utils
+git clone <your-repo-url> dev-tools
+cd dev-tools
 
 .\install\install_codex_api_windows.ps1
 .\install\install_cc_api_windows.ps1
