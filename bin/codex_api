@@ -29,9 +29,9 @@ def usage(exit_code: int = 1) -> None:
     message = "\n".join(
         [
             "Usage:",
-            "  codex_api list",
-            "  codex_api current",
-            "  codex_api switch --<provider>",
+            "  codex_api -l, --list              List available providers",
+            "  codex_api -c, --current           Show active provider",
+            "  codex_api -s, --switch <provider>  Switch to a provider",
         ]
     )
     if exit_code == 0:
@@ -151,10 +151,10 @@ def replace_model_provider(config_text: str, provider: str) -> str:
     return updated
 
 
-def parse_provider_argument(raw: str) -> str:
-    if not raw.startswith("--") or raw == "--":
-        fail("switch expects --<provider>")
-    return raw[2:]
+def parse_provider_argument(argv: list[str], index: int) -> str:
+    if index >= len(argv):
+        fail("--switch requires a provider name")
+    return argv[index]
 
 
 def main(argv: list[str]) -> int:
@@ -176,7 +176,7 @@ def main(argv: list[str]) -> int:
 
     command = argv[0]
 
-    if command == "list":
+    if command in {"-l", "--list"}:
         auth_list = load_json(auth_list_path, required=True)
         for provider_name in providers:
             marker = "*" if provider_name == active_provider else " "
@@ -184,7 +184,7 @@ def main(argv: list[str]) -> int:
             print(f"{marker} {provider_name}  key: {has_key}")
         return 0
 
-    if command == "current":
+    if command in {"-c", "--current"}:
         auth_list = load_json(auth_list_path, required=True)
         auth = load_json(auth_path, required=False)
         stored_key = auth_list.get(active_provider)
@@ -201,11 +201,8 @@ def main(argv: list[str]) -> int:
             print("auth: missing")
         return 0
 
-    if command == "switch":
-        if len(argv) != 2:
-            usage(1)
-
-        target_provider = parse_provider_argument(argv[1])
+    if command in {"-s", "--switch"}:
+        target_provider = parse_provider_argument(argv, 1)
         if target_provider not in providers:
             available = ", ".join(providers.keys())
             fail(f"unknown provider '{target_provider}'. available: {available}")

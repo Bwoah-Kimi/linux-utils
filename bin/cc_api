@@ -24,9 +24,9 @@ def usage(exit_code: int = 1) -> None:
     message = "\n".join(
         [
             "Usage:",
-            "  cc_api list",
-            "  cc_api current",
-            "  cc_api switch --<provider>",
+            "  cc_api -l, --list              List available providers",
+            "  cc_api -c, --current           Show active provider",
+            "  cc_api -s, --switch <provider>  Switch to a provider",
         ]
     )
     if exit_code == 0:
@@ -76,10 +76,10 @@ def write_text_atomic(path: Path, content: str, *, mode: int) -> None:
         fail(f"failed to write {path}: {exc}")
 
 
-def parse_provider_argument(raw: str) -> str:
-    if not raw.startswith("--") or raw == "--":
-        fail("switch expects --<provider>")
-    return raw[2:]
+def parse_provider_argument(argv: list[str], index: int) -> str:
+    if index >= len(argv):
+        fail("--switch requires a provider name")
+    return argv[index]
 
 
 def validate_provider_map(data: dict, path: Path) -> dict[str, dict[str, str]]:
@@ -142,24 +142,21 @@ def main(argv: list[str]) -> int:
 
     command = argv[0]
 
-    if command == "list":
+    if command in {"-l", "--list"}:
         for provider_name in providers:
             is_match = provider_name in matches
             marker = "*" if is_match else " "
             print(f"{marker} {provider_name}  match: {'yes' if is_match else 'no'}")
         return 0
 
-    if command == "current":
+    if command in {"-c", "--current"}:
         current_provider = matches[0] if matches else "unknown"
         print(f"provider: {current_provider}")
         print(f"env: {'in sync' if matches else 'out of sync'}")
         return 0
 
-    if command == "switch":
-        if len(argv) != 2:
-            usage(1)
-
-        target_provider = parse_provider_argument(argv[1])
+    if command in {"-s", "--switch"}:
+        target_provider = parse_provider_argument(argv, 1)
         if target_provider not in providers:
             available = ", ".join(providers.keys())
             fail(f"unknown provider '{target_provider}'. available: {available}")
