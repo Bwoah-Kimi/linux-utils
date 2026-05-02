@@ -1,0 +1,34 @@
+{
+  "env": {
+    "ANTHROPIC_AUTH_TOKEN": "<fill-me: see provider_list.json>",
+    "ANTHROPIC_BASE_URL": "<fill-me: see provider_list.json>",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(bash -n *)",
+      "Bash(zsh -n *)",
+      "Bash(shellcheck *)",
+      "Bash(systemctl status *)",
+      "Bash(dpkg -l *)",
+      "Bash(dpkg -s *)",
+      "Bash(apt-cache show *)",
+      "Bash(apt list *)",
+      "Bash(pip show *)",
+      "Bash(pip list)",
+      "Bash(pip3 show *)",
+      "Bash(pip3 list)",
+      "Bash(npm list)",
+      "Bash(journalctl *)",
+      "Bash(lsb_release *)"
+    ],
+    "deny": []
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "<fill-me: path to your statusline script, e.g. bash ~/.claude/statusline-command.sh>"
+  }
+}
