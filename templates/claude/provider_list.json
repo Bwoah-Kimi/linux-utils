@@ -3,6 +3,10 @@
     "ANTHROPIC_AUTH_TOKEN": "<fill-me>",
     "ANTHROPIC_BASE_URL": "https://api.cubence.com"
   },
+  "micu_claude": {
+    "ANTHROPIC_AUTH_TOKEN": "<fill-me>",
+    "ANTHROPIC_BASE_URL": "https://www.openclaudecode.cn"
+  },
   "autodl_claude": {
     "ANTHROPIC_AUTH_TOKEN": "<fill-me>",
     "ANTHROPIC_BASE_URL": "https://www.autodl.art/api/v1/anthropic",

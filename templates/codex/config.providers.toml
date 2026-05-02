@@ -6,6 +6,12 @@ base_url = "https://codex-api.packycode.com/v1"
 wire_api = "responses"
 requires_openai_auth = true
 
+[model_providers.micu]
+name = "micu"
+base_url = "https://www.openclaudecode.cn/v1"
+wire_api = "responses"
+requires_openai_auth = true
+
 [model_providers.cubence]
 name = "cubence"
 base_url = "https://api.cubence.com/v1"
