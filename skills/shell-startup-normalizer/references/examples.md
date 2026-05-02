@@ -79,6 +79,71 @@ eval "$(starship init zsh)"
 alias ll='ls -lah'
 ```
 
+## Absorbing a Standalone Script Into shell_functions
+
+Standalone helper scripts (e.g. `~/proxy.sh`) are candidates for absorption when they share logic with an existing shell function. If the script adds functionality the function lacks, extend the function with a flag rather than keeping two separate entry points.
+
+Before:
+
+```bash
+# ~/proxy.sh — called manually as: bash ~/proxy.sh 1 / bash ~/proxy.sh 2
+git config --global http.proxy http://172.25.112.1:52738
+git config --global https.proxy http://172.25.112.1:52738
+```
+
+```bash
+# ~/.proxyrc — sourced from ~/.bashrc
+proxy() {
+    case "$1" in
+        set)   export http_proxy="http://127.0.0.1:7897" ;;
+        unset) unset http_proxy ;;
+    esac
+}
+```
+
+After — unified in `~/.shell_functions`, git toggling added as `--git` flag:
+
+```bash
+# ~/.shell_functions
+proxy() {
+    local cmd="$1"
+    local use_git=0
+    [ "$2" = "--git" ] && use_git=1
+
+    local HOST_IP="127.0.0.1"
+    local PROXY_PORT="7897"
+    local PROXY_URL="http://${HOST_IP}:${PROXY_PORT}"
+
+    case "$cmd" in
+        set)
+            export http_proxy="${PROXY_URL}" https_proxy="${PROXY_URL}"
+            export HTTP_PROXY="${PROXY_URL}" HTTPS_PROXY="${PROXY_URL}" all_proxy="${PROXY_URL}"
+            echo "Proxy SET to: ${PROXY_URL}"
+            if [ "$use_git" -eq 1 ]; then
+                git config --global http.proxy "${PROXY_URL}"
+                git config --global https.proxy "${PROXY_URL}"
+                echo "Git proxy SET to: ${PROXY_URL}"
+            fi
+            ;;
+        unset)
+            unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY all_proxy
+            echo "Proxy UNSET."
+            if [ "$use_git" -eq 1 ]; then
+                git config --global --unset http.proxy
+                git config --global --unset https.proxy
+                echo "Git proxy UNSET."
+            fi
+            ;;
+        *)
+            echo "Usage: proxy [set|unset] [--git]"
+            return 1
+            ;;
+    esac
+}
+```
+
+`~/proxy.sh` and `~/.proxyrc` are deleted after absorption. `~/.bashrc` sources `~/.shell_functions` instead.
+
 ## Preserve Tool-Managed Blocks
 
 Keep generated blocks intact, even if you move them to a more appropriate file:
