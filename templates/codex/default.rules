@@ -1,0 +1,62 @@
+# Codex approval rules
+# Format: prefix_rule(pattern=[...], decision="allow"|"deny")
+# Pattern is matched as a prefix against the argv of the command to run.
+# A shorter pattern matches more broadly: ["git"] allows all git commands.
+#
+# Install to: ~/.codex/rules/default.rules
+# See also: approvals_reviewer in ~/.codex/config.toml
+
+# --- syntax / lint checks ---
+prefix_rule(pattern=["bash", "-n"], decision="allow")
+prefix_rule(pattern=["zsh", "-n"], decision="allow")
+prefix_rule(pattern=["shellcheck"], decision="allow")
+
+# --- git inspection (read-only) ---
+prefix_rule(pattern=["git", "--version"], decision="allow")
+prefix_rule(pattern=["git", "status"], decision="allow")
+prefix_rule(pattern=["git", "log"], decision="allow")
+prefix_rule(pattern=["git", "diff"], decision="allow")
+prefix_rule(pattern=["git", "branch"], decision="allow")
+prefix_rule(pattern=["git", "show"], decision="allow")
+prefix_rule(pattern=["git", "ls-tree"], decision="allow")
+prefix_rule(pattern=["git", "submodule", "status"], decision="allow")
+prefix_rule(pattern=["git", "submodule", "foreach"], decision="allow")
+
+# --- package inspection ---
+prefix_rule(pattern=["dpkg", "-l"], decision="allow")
+prefix_rule(pattern=["dpkg", "-s"], decision="allow")
+prefix_rule(pattern=["apt-cache", "show"], decision="allow")
+prefix_rule(pattern=["apt", "list"], decision="allow")
+prefix_rule(pattern=["pip", "show"], decision="allow")
+prefix_rule(pattern=["pip", "list"], decision="allow")
+prefix_rule(pattern=["pip3", "show"], decision="allow")
+prefix_rule(pattern=["pip3", "list"], decision="allow")
+prefix_rule(pattern=["npm", "list"], decision="allow")
+prefix_rule(pattern=["npm", "--version"], decision="allow")
+prefix_rule(pattern=["npm", "config", "list"], decision="allow")
+prefix_rule(pattern=["node", "--version"], decision="allow")
+
+# --- version / tool checks ---
+prefix_rule(pattern=["vim", "--version"], decision="allow")
+prefix_rule(pattern=["python3", "--version"], decision="allow")
+prefix_rule(pattern=["claude", "--version"], decision="allow")
+prefix_rule(pattern=["lsb_release"], decision="allow")
+
+# --- path / file inspection ---
+prefix_rule(pattern=["which"], decision="allow")
+prefix_rule(pattern=["type"], decision="allow")
+prefix_rule(pattern=["readlink"], decision="allow")
+prefix_rule(pattern=["stat"], decision="allow")
+prefix_rule(pattern=["wc"], decision="allow")
+
+# --- system inspection ---
+prefix_rule(pattern=["systemctl", "status"], decision="allow")
+prefix_rule(pattern=["journalctl"], decision="allow")
+
+# --- conda ---
+prefix_rule(pattern=["conda", "env", "list"], decision="allow")
+prefix_rule(pattern=["conda", "info"], decision="allow")
+
+# --- WSL interop ---
+prefix_rule(pattern=["powershell.exe"], decision="allow")
+prefix_rule(pattern=["cmd.exe"], decision="allow")
