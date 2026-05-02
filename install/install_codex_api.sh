@@ -24,13 +24,15 @@ backup_file "${TARGET_CONFIG}"
 
 copy_file "${REPO_ROOT}/bin/codex_api" "${TARGET_SCRIPT}"
 set_executable "${TARGET_SCRIPT}"
-copy_file "${REPO_ROOT}/templates/codex/auth_list.json" "${TARGET_AUTH_LIST}"
+python3 "${REPO_ROOT}/lib/merge_json_template.py" \
+    "${TARGET_AUTH_LIST}" \
+    "${REPO_ROOT}/templates/codex/auth_list.json"
 
 python3 "${REPO_ROOT}/lib/merge_codex_config.py" \
     "${TARGET_CONFIG}" \
     "${REPO_ROOT}/templates/codex/config.providers.toml"
 
 printf 'Installed: %s\n' "${TARGET_SCRIPT}"
-printf 'Installed: %s\n' "${TARGET_AUTH_LIST}"
+printf 'Merged auth keys into: %s\n' "${TARGET_AUTH_LIST}"
+printf 'Note: existing API keys were preserved; new entries use placeholder values\n'
 printf 'Merged helper-managed providers into: %s\n' "${TARGET_CONFIG}"
-printf 'Manual step: fill in real API keys in %s\n' "${TARGET_AUTH_LIST}"

@@ -22,9 +22,11 @@ backup_file "${TARGET_PROVIDER_LIST}"
 
 copy_file "${REPO_ROOT}/bin/cc_api" "${TARGET_SCRIPT}"
 set_executable "${TARGET_SCRIPT}"
-copy_file "${REPO_ROOT}/templates/claude/provider_list.json" "${TARGET_PROVIDER_LIST}"
+python3 "${REPO_ROOT}/lib/merge_json_template.py" \
+    "${TARGET_PROVIDER_LIST}" \
+    "${REPO_ROOT}/templates/claude/provider_list.json"
 
 printf 'Installed: %s\n' "${TARGET_SCRIPT}"
-printf 'Installed: %s\n' "${TARGET_PROVIDER_LIST}"
-printf 'Manual step: fill in real provider tokens in %s\n' "${TARGET_PROVIDER_LIST}"
+printf 'Merged providers into: %s\n' "${TARGET_PROVIDER_LIST}"
+printf 'Note: existing provider tokens were preserved; new entries use placeholder values\n'
 printf 'Preserved existing Claude settings in %s/settings.json\n' "${CLAUDE_DIR}"
