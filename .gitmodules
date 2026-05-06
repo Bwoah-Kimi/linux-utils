@@ -1,3 +1,6 @@
 [submodule "modules/oh-my--paper"]
 	path = modules/oh-my--paper
 	url = git@github.com:Bwoah-Kimi/Oh-my--paper.git
+[submodule "modules/claude-mem"]
+	path = modules/claude-mem
+	url = git@github.com:Bwoah-Kimi/claude-mem.git
