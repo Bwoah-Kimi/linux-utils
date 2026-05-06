@@ -12,7 +12,7 @@ The root of this repo is a catalog. Each substantial helper owns its implementat
 | [`modules/proxy`](modules/proxy/README.md) | `proxy` executable and shell wrapper installer |
 | [`modules/shell-startup-normalizer`](modules/shell-startup-normalizer/README.md) | Codex and Claude Code skill for reorganizing shell startup files |
 | [`modules/vim-setup`](modules/vim-setup/README.md) | Claude Code skill for restoring a preferred Vim setup |
-| [`Oh-my--paper`](Oh-my--paper/README.md) | Submodule-backed paper reading project with its own docs |
+| [`modules/oh-my--paper`](modules/oh-my--paper/README.md) | Submodule-backed paper reading project with its own docs |
 
 ## Layout
 
@@ -64,6 +64,7 @@ Re-running API switcher installers adds new template entries without overwriting
 ## Cross-repo docs
 
 - [Permission migration](docs/permission-migration.md)
+- [Submodule maintenance](docs/submodules.md)
 - [npm troubleshooting](docs/npm-troubleshooting.md)
 
 ## Verification
