@@ -1,19 +1,19 @@
 # Codex approval rules
-# Format: prefix_rule(pattern=[...], decision="allow"|"deny")
+# Format: prefix_rule(pattern=[...], decision="allow"|"prompt"|"forbidden")
 # Pattern is matched as a prefix against the argv of the command to run.
 # A shorter pattern matches more broadly: ["git"] allows all git commands.
 #
 # Install to: ~/.codex/rules/default.rules
 # See also: approvals_reviewer in ~/.codex/config.toml
 #
-# Style: broad allow + targeted deny.
+# Style: broad allow + targeted block.
 #   - The broad-allow half is supplied by `trust_level = "trusted"` on each
 #     project in ~/.codex/config.toml — Codex auto-approves commands inside
 #     trusted project roots without consulting these rules.
 #   - This file supplies (a) explicit allow rules for common read-only
-#     commands so they pass even outside trusted projects, and (b) a deny
+#     commands so they pass even outside trusted projects, and (b) a forbidden
 #     block for destructive operations that should never run unprompted.
-#   - Deny outranks allow. Prefix matching is approximate — `rm -rf` and
+#   - Forbidden outranks allow. Prefix matching is approximate — `rm -rf` and
 #     `rm -fr` are different prefixes, so each variant must be listed.
 
 # --- syntax / lint checks ---
@@ -71,30 +71,30 @@ prefix_rule(pattern=["conda", "info"], decision="allow")
 prefix_rule(pattern=["powershell.exe"], decision="allow")
 prefix_rule(pattern=["cmd.exe"], decision="allow")
 
-# --- destructive denies (filesystem) ---
-prefix_rule(pattern=["rm", "-rf"], decision="deny")
-prefix_rule(pattern=["rm", "-fr"], decision="deny")
-prefix_rule(pattern=["rm", "-r", "-f"], decision="deny")
-prefix_rule(pattern=["rm", "-f", "-r"], decision="deny")
-prefix_rule(pattern=["sudo", "rm"], decision="deny")
-prefix_rule(pattern=["dd"], decision="deny")
-prefix_rule(pattern=["mkfs"], decision="deny")
-prefix_rule(pattern=["chmod", "-R", "777"], decision="deny")
-prefix_rule(pattern=["chmod", "777"], decision="deny")
-prefix_rule(pattern=["chown", "-R"], decision="deny")
+# --- destructive blocks (filesystem) ---
+prefix_rule(pattern=["rm", "-rf"], decision="forbidden")
+prefix_rule(pattern=["rm", "-fr"], decision="forbidden")
+prefix_rule(pattern=["rm", "-r", "-f"], decision="forbidden")
+prefix_rule(pattern=["rm", "-f", "-r"], decision="forbidden")
+prefix_rule(pattern=["sudo", "rm"], decision="forbidden")
+prefix_rule(pattern=["dd"], decision="forbidden")
+prefix_rule(pattern=["mkfs"], decision="forbidden")
+prefix_rule(pattern=["chmod", "-R", "777"], decision="forbidden")
+prefix_rule(pattern=["chmod", "777"], decision="forbidden")
+prefix_rule(pattern=["chown", "-R"], decision="forbidden")
 
-# --- destructive denies (git) ---
-prefix_rule(pattern=["git", "push", "--force"], decision="deny")
-prefix_rule(pattern=["git", "push", "-f"], decision="deny")
-prefix_rule(pattern=["git", "reset", "--hard"], decision="deny")
-prefix_rule(pattern=["git", "clean", "-f"], decision="deny")
-prefix_rule(pattern=["git", "clean", "-fd"], decision="deny")
-prefix_rule(pattern=["git", "clean", "-fdx"], decision="deny")
-prefix_rule(pattern=["git", "checkout", "--"], decision="deny")
-prefix_rule(pattern=["git", "branch", "-D"], decision="deny")
+# --- destructive blocks (git) ---
+prefix_rule(pattern=["git", "push", "--force"], decision="forbidden")
+prefix_rule(pattern=["git", "push", "-f"], decision="forbidden")
+prefix_rule(pattern=["git", "reset", "--hard"], decision="forbidden")
+prefix_rule(pattern=["git", "clean", "-f"], decision="forbidden")
+prefix_rule(pattern=["git", "clean", "-fd"], decision="forbidden")
+prefix_rule(pattern=["git", "clean", "-fdx"], decision="forbidden")
+prefix_rule(pattern=["git", "checkout", "--"], decision="forbidden")
+prefix_rule(pattern=["git", "branch", "-D"], decision="forbidden")
 
-# --- destructive denies (system) ---
-prefix_rule(pattern=["shutdown"], decision="deny")
-prefix_rule(pattern=["reboot"], decision="deny")
-prefix_rule(pattern=["halt"], decision="deny")
-prefix_rule(pattern=["poweroff"], decision="deny")
+# --- destructive blocks (system) ---
+prefix_rule(pattern=["shutdown"], decision="forbidden")
+prefix_rule(pattern=["reboot"], decision="forbidden")
+prefix_rule(pattern=["halt"], decision="forbidden")
+prefix_rule(pattern=["poweroff"], decision="forbidden")
