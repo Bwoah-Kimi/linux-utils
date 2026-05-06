@@ -1,5 +1,6 @@
 import json
 import os
+import shlex
 import subprocess
 import tempfile
 import unittest
@@ -7,11 +8,31 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+API_SWITCHER = REPO_ROOT / "modules" / "api-switcher"
+API_SWITCHER_INSTALL = "modules/api-switcher/install"
+
+
+def bash_path(path: Path) -> str:
+    value = path.resolve().as_posix()
+    if len(value) >= 3 and value[1:3] == ":/":
+        return f"/mnt/{value[0].lower()}/{value[3:]}"
+    return value
+
+
+def run_bash_with_home(script: str, home: Path) -> subprocess.CompletedProcess:
+    command = f"HOME={shlex.quote(bash_path(home))} bash {shlex.quote(script)}"
+    return subprocess.run(
+        ["bash", "-lc", command],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
 
 
 class InstallCodexApiTest(unittest.TestCase):
     def test_install_codex_api_copies_script_and_merges_config(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
             home = Path(tmp)
             (home / ".codex").mkdir()
             (home / ".codex" / "config.toml").write_text(
@@ -23,17 +44,7 @@ class InstallCodexApiTest(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            env = os.environ.copy()
-            env["HOME"] = str(home)
-
-            result = subprocess.run(
-                ["bash", "install/install_codex_api.sh"],
-                cwd=REPO_ROOT,
-                check=False,
-                capture_output=True,
-                text=True,
-                env=env,
-            )
+            result = run_bash_with_home(f"{API_SWITCHER_INSTALL}/install_codex_api.sh", home)
 
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertTrue((home / ".local" / "bin" / "codex_api").exists())

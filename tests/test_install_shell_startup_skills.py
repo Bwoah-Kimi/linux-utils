@@ -1,4 +1,5 @@
 import os
+import shlex
 import subprocess
 import tempfile
 import unittest
@@ -6,40 +7,46 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SHELL_STARTUP = REPO_ROOT / "modules" / "shell-startup-normalizer"
+SHELL_STARTUP_INSTALL = "modules/shell-startup-normalizer/install"
+
+
+def bash_path(path: Path) -> str:
+    value = path.resolve().as_posix()
+    if len(value) >= 3 and value[1:3] == ":/":
+        return f"/mnt/{value[0].lower()}/{value[3:]}"
+    return value
+
+
+def run_bash_with_home(script: str, home: Path) -> subprocess.CompletedProcess:
+    command = f"HOME={shlex.quote(bash_path(home))} bash {shlex.quote(script)}"
+    return subprocess.run(
+        ["bash", "-lc", command],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
 
 
 class InstallShellStartupSkillsTest(unittest.TestCase):
     def test_install_codex_shell_startup_skill(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
             home = Path(tmp)
-            env = os.environ.copy()
-            env["HOME"] = str(home)
-
-            result = subprocess.run(
-                ["bash", "install/install_codex_shell_startup_skill.sh"],
-                cwd=REPO_ROOT,
-                check=False,
-                capture_output=True,
-                text=True,
-                env=env,
+            result = run_bash_with_home(
+                f"{SHELL_STARTUP_INSTALL}/install_codex_shell_startup_skill.sh",
+                home,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertTrue((home / ".codex" / "skills" / "shell-startup-normalizer" / "SKILL.md").exists())
 
     def test_install_claude_shell_startup_skill(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
             home = Path(tmp)
-            env = os.environ.copy()
-            env["HOME"] = str(home)
-
-            result = subprocess.run(
-                ["bash", "install/install_claude_shell_startup_skill.sh"],
-                cwd=REPO_ROOT,
-                check=False,
-                capture_output=True,
-                text=True,
-                env=env,
+            result = run_bash_with_home(
+                f"{SHELL_STARTUP_INSTALL}/install_claude_shell_startup_skill.sh",
+                home,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)

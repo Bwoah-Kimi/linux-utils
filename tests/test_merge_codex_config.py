@@ -5,6 +5,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+MERGE_CODEX_CONFIG = "modules/api-switcher/lib/merge_codex_config.py"
 
 
 class MergeCodexConfigTest(unittest.TestCase):
@@ -40,7 +41,7 @@ class MergeCodexConfigTest(unittest.TestCase):
             )
 
             result = subprocess.run(
-                ["python3", "lib/merge_codex_config.py", str(local_config), str(provider_config)],
+                ["python", MERGE_CODEX_CONFIG, str(local_config), str(provider_config)],
                 cwd=REPO_ROOT,
                 check=False,
                 capture_output=True,

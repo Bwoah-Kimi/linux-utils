@@ -28,7 +28,7 @@ different rules and must each be listed.
 ## Claude Code
 
 Permissions live in `permissions.allow` and `permissions.deny` arrays in
-`~/.claude/settings.json`. The template at `templates/claude/settings.json` contains the
+`~/.claude/settings.json`. The template at `modules/api-switcher/templates/claude/settings.json` contains the
 curated baseline.
 
 Copy the `permissions` block into your `~/.claude/settings.json` on the new machine:
@@ -80,12 +80,12 @@ Codex's permission model is split across two files:
    rules for common read-only commands so they pass outside trusted projects, and (b) a
    deny block for destructive operations.
 
-The template at `templates/codex/default.rules` contains the curated baseline. Copy it
+The template at `modules/api-switcher/templates/codex/default.rules` contains the curated baseline. Copy it
 directly — this file is standalone and does not interact with `config.toml`:
 
 ```bash
 mkdir -p ~/.codex/rules
-cp templates/codex/default.rules ~/.codex/rules/default.rules
+cp modules/api-switcher/templates/codex/default.rules ~/.codex/rules/default.rules
 ```
 
 `install_codex_api.sh` only merges provider sections into `config.toml` and never
@@ -126,4 +126,4 @@ legitimate is blocked, edit the deny list or approve once at the prompt.
 
 New approvals accumulate in `~/.claude/settings.local.json` (Claude Code) and
 `~/.codex/rules/default.rules` (Codex) as you work. Periodically review them, promote
-any generally useful ones back into the templates in this repo, and commit.
+any generally useful ones back into the modules/api-switcher/templates in this repo, and commit.

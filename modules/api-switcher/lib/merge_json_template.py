@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 """Merge a JSON template into an existing JSON file.
 
 Keys present in the target are kept as-is (existing values, including real API

@@ -46,3 +46,16 @@ copy_file() {
 set_executable() {
     chmod 755 "$1"
 }
+
+find_python() {
+    if command -v python3 >/dev/null 2>&1 && python3 -c 'import sys' >/dev/null 2>&1; then
+        printf 'python3\n'
+        return 0
+    fi
+    if command -v python >/dev/null 2>&1 && python -c 'import sys' >/dev/null 2>&1; then
+        printf 'python\n'
+        return 0
+    fi
+    printf 'missing required Python interpreter\n' >&2
+    exit 1
+}

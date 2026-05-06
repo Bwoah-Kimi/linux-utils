@@ -3,7 +3,8 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SKILL_DIR = REPO_ROOT / "skills" / "shell-startup-normalizer"
+SHELL_STARTUP = REPO_ROOT / "modules" / "shell-startup-normalizer"
+SKILL_DIR = SHELL_STARTUP / "skill"
 
 
 class ShellStartupSkillStructureTest(unittest.TestCase):
@@ -24,7 +25,7 @@ class ShellStartupSkillStructureTest(unittest.TestCase):
         self.assertIn("backups", raw)
 
     def test_readme_documents_skill_install_flow(self):
-        readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+        readme = (SHELL_STARTUP / "README.md").read_text(encoding="utf-8")
         self.assertIn("bash install/install_codex_shell_startup_skill.sh", readme)
         self.assertIn("bash install/install_claude_shell_startup_skill.sh", readme)
         self.assertIn("~/.codex/skills/shell-startup-normalizer", readme)

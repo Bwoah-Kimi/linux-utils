@@ -7,6 +7,13 @@
     "ANTHROPIC_AUTH_TOKEN": "<fill-me>",
     "ANTHROPIC_BASE_URL": "https://www.openclaudecode.cn"
   },
+  "micu_codex": {
+    "ANTHROPIC_AUTH_TOKEN": "<fill-me>",
+    "ANTHROPIC_BASE_URL": "https://www.openclaudecode.cn",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "gpt-5.5",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "gpt-5.5",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "gpt-5.5"
+  },
   "autodl_claude": {
     "ANTHROPIC_AUTH_TOKEN": "<fill-me>",
     "ANTHROPIC_BASE_URL": "https://www.autodl.art/api/v1/anthropic",
